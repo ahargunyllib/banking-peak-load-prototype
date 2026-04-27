@@ -2,23 +2,31 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/ahargunyllib/banking-peak-load-prototype/internal/config"
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/handler"
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/logger"
 	appmw "github.com/ahargunyllib/banking-peak-load-prototype/internal/middleware"
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/repository/memory"
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/service"
+	echoprometheus "github.com/labstack/echo-prometheus"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
-	echoprometheus "github.com/labstack/echo-prometheus"
 )
 
 func main() {
-	logger.Init()
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)
+		os.Exit(1)
+	}
+
+	logger.Init(cfg.AppEnv)
 
 	accountRepo := memory.NewAccountRepository()
 	txRepo := memory.NewTransactionRepository()
@@ -39,7 +47,9 @@ func main() {
 	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
 		Level: 5,
 	}))
-	e.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(20.0)))
+	if cfg.RateLimitEnabled {
+		e.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(cfg.RateLimitRPS)))
+	}
 	e.Use(middleware.Recover())
 	e.Use(middleware.RequestID()) // sets X-Request-ID header; must run before RequestLogger
 	e.Use(appmw.RequestLogger())  // wide event canonical log line
@@ -56,7 +66,7 @@ func main() {
 	defer cancel()
 
 	sc := echo.StartConfig{
-		Address:         ":8080",
+		Address:         fmt.Sprintf(":%d", cfg.AppPort),
 		GracefulTimeout: 5 * time.Second, // defaults to 10 seconds
 	}
 

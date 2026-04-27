@@ -16,14 +16,14 @@ type WideEvent map[string]any
 var L *slog.Logger
 
 // Init configures the global JSON logger. Call once at startup.
-// Reads APP_VERSION, GIT_COMMIT, APP_ENV from the environment so every log
-// line carries deployment context automatically.
-func Init() {
+// appEnv is logged as a startup field so every deployment context is visible.
+func Init(appEnv string) {
 	L = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
 
 	slog.SetDefault(L)
+	L.Info("logger initialized", "app_env", appEnv)
 }
 
 // NewEvent creates an empty WideEvent.
