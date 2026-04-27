@@ -15,4 +15,4 @@ test:
 	go test -v ./...
 
 build:
-	go build -o bin/app cmd/main.go
+	go build -o bin/app cmd/server/main.go
