@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/domain/account"
+	"github.com/ahargunyllib/banking-peak-load-prototype/internal/logger"
 )
 
 type AccountService interface {
@@ -19,5 +20,14 @@ func NewAccountService(repo account.Repository) AccountService {
 }
 
 func (s *accountService) GetBalance(ctx context.Context, id int64) (*account.Account, error) {
-	return s.repo.GetByID(ctx, id)
+	logger.Set(ctx, "account_id", id)
+
+	acc, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		logger.Set(ctx, "account_error", err.Error())
+		return nil, err
+	}
+
+	logger.Set(ctx, "account_balance", acc.Balance)
+	return acc, nil
 }
