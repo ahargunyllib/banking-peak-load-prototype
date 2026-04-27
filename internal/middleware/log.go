@@ -18,7 +18,6 @@ func RequestLogger() echo.MiddlewareFunc {
 			// Attach a fresh wide event to the request context so handlers and
 			// services can add business fields via logger.Set.
 			event := logger.NewEvent()
-			event["request_id"] = c.Request().Header.Get(echo.HeaderXRequestID)
 			event["method"] = c.Request().Method
 			event["path"] = c.Request().URL.Path
 
@@ -30,6 +29,7 @@ func RequestLogger() echo.MiddlewareFunc {
 			if resp, err := echo.UnwrapResponse(c.Response()); err == nil {
 				event["status"] = resp.Status
 			}
+			event["request_id"] = c.Response().Header().Get(echo.HeaderXRequestID)
 			event["duration_ms"] = time.Since(start).Milliseconds()
 			if handlerErr != nil {
 				event["error"] = handlerErr.Error()
