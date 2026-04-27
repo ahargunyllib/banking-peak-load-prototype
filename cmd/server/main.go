@@ -14,6 +14,7 @@ import (
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/service"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
+	echoprometheus "github.com/labstack/echo-prometheus"
 )
 
 func main() {
@@ -43,6 +44,9 @@ func main() {
 	e.Use(middleware.RequestID()) // sets X-Request-ID header; must run before RequestLogger
 	e.Use(appmw.RequestLogger())  // wide event canonical log line
 	e.Use(middleware.Secure())
+
+	e.Use(echoprometheus.NewMiddleware("myapp"))   // adds middleware to gather metrics
+	e.GET("/metrics", echoprometheus.NewHandler()) // adds route to serve gathered metrics
 
 	e.GET("/api/v1/accounts/:id/balance", accountHandler.GetBalance)
 	e.POST("/api/v1/transactions", txHandler.CreateTransaction)
