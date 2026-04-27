@@ -1,6 +1,10 @@
 package main
 
 import (
+	"context"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/handler"
@@ -25,7 +29,7 @@ func main() {
 	txHandler := handler.NewTransactionHandler(txSvc)
 
 	e := echo.New()
-	e.Logger = logger.L // route Echo's internal logs through our slog JSON logger
+	e.Logger = logger.L                    // route Echo's internal logs through our slog JSON logger
 	e.Use(middleware.BodyLimit(2_097_152)) // 2MB
 	e.Use(middleware.ContextTimeout(60 * time.Second))
 	// e.Use(middleware.CORS("https://example.com")) // Allow CORS from frontend domain in real deployment
@@ -44,5 +48,15 @@ func main() {
 	e.POST("/api/v1/transactions", txHandler.CreateTransaction)
 	e.GET("/api/v1/transactions/:id/status", txHandler.GetTransactionStatus)
 
-	e.Start(":8080")
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM) // start shutdown process on signal
+	defer cancel()
+
+	sc := echo.StartConfig{
+		Address:         ":8080",
+		GracefulTimeout: 5 * time.Second, // defaults to 10 seconds
+	}
+
+	if err := sc.Start(ctx, e); err != nil {
+		e.Logger.Error("failed to start server", "error", err)
+	}
 }
