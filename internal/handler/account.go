@@ -4,16 +4,16 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/ahargunyllib/banking-peak-load-prototype/internal/domain/account"
+	"github.com/ahargunyllib/banking-peak-load-prototype/internal/service"
 	"github.com/labstack/echo/v5"
 )
 
 type AccountHandler struct {
-	repo account.Repository
+	svc service.AccountService
 }
 
-func NewAccountHandler(repo account.Repository) *AccountHandler {
-	return &AccountHandler{repo: repo}
+func NewAccountHandler(svc service.AccountService) *AccountHandler {
+	return &AccountHandler{svc: svc}
 }
 
 func (h *AccountHandler) GetBalance(c *echo.Context) error {
@@ -23,7 +23,7 @@ func (h *AccountHandler) GetBalance(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid account id"})
 	}
 
-	acc, err := h.repo.GetByID(c.Request().Context(), id)
+	acc, err := h.svc.GetBalance(c.Request().Context(), id)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "account not found"})
 	}

@@ -1,21 +1,19 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
-	"time"
 
-	"github.com/ahargunyllib/banking-peak-load-prototype/internal/domain/transaction"
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/handler/request"
+	"github.com/ahargunyllib/banking-peak-load-prototype/internal/service"
 	"github.com/labstack/echo/v5"
 )
 
 type TransactionHandler struct {
-	repo transaction.Repository
+	svc service.TransactionService
 }
 
-func NewTransactionHandler(repo transaction.Repository) *TransactionHandler {
-	return &TransactionHandler{repo: repo}
+func NewTransactionHandler(svc service.TransactionService) *TransactionHandler {
+	return &TransactionHandler{svc: svc}
 }
 
 func (h *TransactionHandler) CreateTransaction(c *echo.Context) error {
@@ -30,16 +28,12 @@ func (h *TransactionHandler) CreateTransaction(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "amount must be greater than 0"})
 	}
 
-	tx := &transaction.Transaction{
-		ID:            fmt.Sprintf("tx_%d", time.Now().UnixNano()),
+	tx, err := h.svc.CreateTransaction(c.Request().Context(), service.CreateTransactionInput{
 		SourceAccount: req.SourceAccount,
 		DestAccount:   req.DestAccount,
 		Amount:        req.Amount,
-		Status:        transaction.StatusCompleted,
-		CreatedAt:     time.Now(),
-	}
-
-	if err := h.repo.Save(c.Request().Context(), tx); err != nil {
+	})
+	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to save transaction"})
 	}
 
@@ -59,7 +53,7 @@ func (h *TransactionHandler) GetTransactionStatus(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "id is required"})
 	}
 
-	tx, err := h.repo.GetByID(c.Request().Context(), id)
+	tx, err := h.svc.GetTransactionStatus(c.Request().Context(), id)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "transaction not found"})
 	}
