@@ -24,6 +24,8 @@ Thumbs.db
 .env.local
 .env.*
 !.env.example
+!.env.baseline
+!.env.optimized
 
 # Docker volumes
 data/
