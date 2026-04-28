@@ -50,7 +50,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "failed to connect to postgres: %v\n", err)
 			os.Exit(1)
 		}
-		defer db.Close()
+		defer func() { _ = db.Close() }()
 		accountRepo = pgrepo.NewAccountRepository(db)
 		txRepo = pgrepo.NewTransactionRepository(db)
 	}

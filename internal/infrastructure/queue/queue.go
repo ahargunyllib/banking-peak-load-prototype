@@ -14,12 +14,12 @@ func New(url string) (*Client, error) {
 	}
 	ch, err := conn.Channel()
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, err
 	}
 	if _, err = ch.QueueDeclare("transactions.dlq", true, false, false, false, nil); err != nil {
-		ch.Close()
-		conn.Close()
+		_ = ch.Close()
+		_ = conn.Close()
 		return nil, err
 	}
 	args := amqp.Table{
@@ -27,14 +27,14 @@ func New(url string) (*Client, error) {
 		"x-dead-letter-routing-key": "transactions.dlq",
 	}
 	if _, err = ch.QueueDeclare("transactions", true, false, false, false, args); err != nil {
-		ch.Close()
-		conn.Close()
+		_ = ch.Close()
+		_ = conn.Close()
 		return nil, err
 	}
 	return &Client{Conn: conn, Channel: ch}, nil
 }
 
 func (c *Client) Close() {
-	c.Channel.Close()
-	c.Conn.Close()
+	_ = c.Channel.Close()
+	_ = c.Conn.Close()
 }
