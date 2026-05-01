@@ -59,6 +59,7 @@ services:
         if [ ! -s /var/lib/postgresql/data/PG_VERSION ]; then
           su-exec postgres pg_basebackup -h postgres -U postgres -D /var/lib/postgresql/data -Fp -Xs -R -P
         fi
+        chmod 700 /var/lib/postgresql/data
         exec su-exec postgres postgres
       "
     healthcheck:
@@ -74,6 +75,7 @@ services:
     profiles: [optimized]
     volumes:
       - ./deployments/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./deployments/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
     command: ["pgbouncer", "/etc/pgbouncer/pgbouncer.ini"]
     ports: ["6432:6432"]
     depends_on:
