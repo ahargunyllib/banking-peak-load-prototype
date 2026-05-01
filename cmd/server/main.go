@@ -45,7 +45,11 @@ func main() {
 	var txRepo transaction.Repository = memory.NewTransactionRepository()
 
 	if cfg.DBPrimaryDSN != "" {
-		db, err := infrapostgres.New(cfg.DBPrimaryDSN)
+		appDSN := cfg.DBPrimaryDSN
+		if cfg.PgBouncerDSN != "" {
+			appDSN = cfg.PgBouncerDSN
+		}
+		db, err := infrapostgres.New(appDSN)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to connect to postgres: %v\n", err)
 			os.Exit(1)
