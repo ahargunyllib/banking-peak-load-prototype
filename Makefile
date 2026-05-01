@@ -19,11 +19,11 @@ build:
 	go build -o bin/app cmd/server/main.go
 
 up:
-	cp .env.baseline .env
+	cp .env.baseline.example .env
 	docker compose up -d --build
 
 up-optimized:
-	cp .env.optimized .env
+	cp .env.optimized.example .env
 	docker compose --profile optimized up -d --build
 
 down:
