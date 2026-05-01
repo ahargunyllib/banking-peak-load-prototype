@@ -7,11 +7,20 @@ services:
       dockerfile: deployments/docker/Dockerfile
     ports: ["8080:8080"]
     env_file: .env
+    networks: [banking-net]
+    restart: on-failure
     depends_on:
       postgres:
         condition: service_healthy
-    networks: [banking-net]
-    restart: on-failure
+      pgbouncer:
+        condition: service_healthy
+        required: false
+      redis:
+        condition: service_healthy
+        required: false
+      rabbitmq:
+        condition: service_healthy
+        required: false
 
   postgres:
     image: postgres:16-alpine
