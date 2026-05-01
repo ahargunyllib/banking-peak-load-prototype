@@ -21,6 +21,7 @@ import (
 	pgrepo "github.com/ahargunyllib/banking-peak-load-prototype/internal/repository/postgres"
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/service"
 	echoprometheus "github.com/labstack/echo-prometheus"
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 )
@@ -55,8 +56,20 @@ func main() {
 			os.Exit(1)
 		}
 		defer func() { _ = db.Close() }()
-		accountRepo = pgrepo.NewAccountRepository(db)
-		txRepo = pgrepo.NewTransactionRepository(db)
+
+		var replicaDB *sqlx.DB
+		if cfg.DBReadReplicaEnabled && cfg.PgBouncerReadDSN != "" {
+			replicaDB, err = infrapostgres.New(cfg.PgBouncerReadDSN)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "warning: read replica unavailable, falling back to primary: %v\n", err)
+				replicaDB = nil
+			} else {
+				defer func() { _ = replicaDB.Close() }()
+			}
+		}
+
+		accountRepo = pgrepo.NewAccountRepository(db, replicaDB)
+		txRepo = pgrepo.NewTransactionRepository(db, replicaDB)
 	}
 
 	if cfg.CacheEnabled && cfg.RedisAddr != "" {

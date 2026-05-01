@@ -10,15 +10,21 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type AccountRepository struct{ db *sqlx.DB }
+type AccountRepository struct {
+	db      *sqlx.DB
+	replica *sqlx.DB
+}
 
-func NewAccountRepository(db *sqlx.DB) *AccountRepository {
-	return &AccountRepository{db: db}
+func NewAccountRepository(db, replica *sqlx.DB) *AccountRepository {
+	if replica == nil {
+		replica = db
+	}
+	return &AccountRepository{db: db, replica: replica}
 }
 
 func (r *AccountRepository) GetByID(ctx context.Context, id int64) (*account.Account, error) {
 	var a account.Account
-	err := r.db.GetContext(ctx, &a,
+	err := r.replica.GetContext(ctx, &a,
 		`SELECT id, name, balance, updated_at FROM accounts WHERE id = $1`, id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("account %d not found", id)
