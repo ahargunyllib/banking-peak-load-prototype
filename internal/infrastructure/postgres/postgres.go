@@ -1,7 +1,9 @@
 package postgres
 
 import (
+	"context"
 	"errors"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -12,6 +14,9 @@ import (
 )
 
 func New(dsn string) (*sqlx.DB, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	cfg, err := pgx.ParseConfig(dsn)
 	if err != nil {
 		return nil, err
@@ -20,7 +25,7 @@ func New(dsn string) (*sqlx.DB, error) {
 	cfg.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 	sqlDB := stdlib.OpenDB(*cfg)
 	db := sqlx.NewDb(sqlDB, "pgx")
-	if err := db.Ping(); err != nil {
+	if err := db.PingContext(ctx); err != nil {
 		return nil, err
 	}
 	return db, nil
