@@ -58,7 +58,7 @@ services:
     networks: [banking-net]
 
   pgbouncer:
-    image: edoburu/pgbouncer:1.23.1
+    image: edoburu/pgbouncer:v1.25.1-p0
     profiles: [optimized]
     volumes:
       - ./deployments/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
