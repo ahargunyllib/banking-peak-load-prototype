@@ -121,6 +121,16 @@ services:
       start_period: 30s
     networks: [banking-net]
 
+  prometheus:
+    image: prom/prometheus:v3.4.0
+    profiles: [observability]
+    volumes:
+      - ./deployments/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports: ["9090:9090"]
+    depends_on: [app]
+    networks: [banking-net]
+
 networks:
   banking-net:
     driver: bridge
@@ -129,3 +139,4 @@ volumes:
   postgres-data:
   postgres-replica-data:
   rabbitmq-data:
+  prometheus-data:
