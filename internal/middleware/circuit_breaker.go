@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/config"
+	"github.com/ahargunyllib/banking-peak-load-prototype/internal/metrics"
 	"github.com/labstack/echo/v5"
 	"github.com/sony/gobreaker"
 )
@@ -27,6 +28,13 @@ func CircuitBreaker(cfg config.Config) echo.MiddlewareFunc {
 		Timeout:     time.Duration(cfg.CBTimeoutSeconds) * time.Second,
 		ReadyToTrip: func(counts gobreaker.Counts) bool {
 			return int(counts.ConsecutiveFailures) >= cfg.CBMaxFailures
+		},
+		OnStateChange: func(_ string, _ gobreaker.State, to gobreaker.State) {
+			if to == gobreaker.StateOpen {
+				metrics.CircuitBreakerOpen.Set(1)
+			} else {
+				metrics.CircuitBreakerOpen.Set(0)
+			}
 		},
 	})
 

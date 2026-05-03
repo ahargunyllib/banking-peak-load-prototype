@@ -8,6 +8,7 @@ import (
 
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/domain/account"
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/logger"
+	"github.com/ahargunyllib/banking-peak-load-prototype/internal/metrics"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -35,9 +36,11 @@ func (s *accountService) GetBalance(ctx context.Context, id int64) (*account.Acc
 			if err := json.Unmarshal(cached, &acc); err == nil {
 				logger.Set(ctx, "cache_hit", true)
 				logger.Set(ctx, "account_balance", acc.Balance)
+				metrics.CacheHits.WithLabelValues("balance").Inc()
 				return &acc, nil
 			}
 		}
+		metrics.CacheMisses.WithLabelValues("balance").Inc()
 		logger.Set(ctx, "cache_hit", false)
 	}
 

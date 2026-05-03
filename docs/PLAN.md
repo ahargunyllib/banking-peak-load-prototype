@@ -14,6 +14,6 @@
 - [x] Route reads to PostgreSQL replica when `DB_READ_REPLICA_ENABLED=true`
 
 ## Phase 3 — Observability
-- [ ] Prometheus scrape config (`deployments/prometheus/prometheus.yml`)
+- [x] Prometheus scrape config (`deployments/prometheus/prometheus.yml`)
 - [ ] Grafana dashboard provisioning (TPS, p95 latency, error rate, cache hit rate)
 - [ ] k6 optimized load test script (`scripts/load-test/optimized.js`)

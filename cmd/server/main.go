@@ -17,6 +17,7 @@ import (
 	infraredis "github.com/ahargunyllib/banking-peak-load-prototype/internal/infrastructure/redis"
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/logger"
 	appmw "github.com/ahargunyllib/banking-peak-load-prototype/internal/middleware"
+	"github.com/ahargunyllib/banking-peak-load-prototype/internal/metrics"
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/repository/memory"
 	pgrepo "github.com/ahargunyllib/banking-peak-load-prototype/internal/repository/postgres"
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/service"
@@ -131,6 +132,23 @@ func main() {
 	if cfg.QueueEnabled && queueClient != nil && db != nil {
 		w := worker.NewWorker(db, queueClient, redisClient, txRepo)
 		go w.Start(ctx, cfg.QueueWorkers)
+	}
+
+	if db != nil {
+		go func() {
+			t := time.NewTicker(5 * time.Second)
+			defer t.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-t.C:
+					s := db.Stats()
+					metrics.DBConnectionsActive.Set(float64(s.InUse))
+					metrics.DBConnectionsIdle.Set(float64(s.Idle))
+				}
+			}
+		}()
 	}
 
 	sc := echo.StartConfig{

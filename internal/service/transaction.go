@@ -11,6 +11,7 @@ import (
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/domain/transaction"
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/infrastructure/queue"
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/logger"
+	"github.com/ahargunyllib/banking-peak-load-prototype/internal/metrics"
 	"github.com/jmoiron/sqlx"
 	"github.com/redis/go-redis/v9"
 )
@@ -217,9 +218,11 @@ func (s *transactionService) GetTransactionStatus(ctx context.Context, id string
 			if err := json.Unmarshal(cached, &tx); err == nil {
 				logger.Set(ctx, "cache_hit", true)
 				logger.Set(ctx, "transaction_status", tx.Status)
+				metrics.CacheHits.WithLabelValues("tx_status").Inc()
 				return &tx, nil
 			}
 		}
+		metrics.CacheMisses.WithLabelValues("tx_status").Inc()
 		logger.Set(ctx, "cache_hit", false)
 	}
 
