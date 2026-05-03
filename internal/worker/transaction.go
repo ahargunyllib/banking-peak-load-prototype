@@ -49,7 +49,7 @@ func (w *Worker) Start(ctx context.Context, concurrency int) {
 					if !ok {
 						return
 					}
-					w.process(ctx, msg)
+					w.process(ctx, &msg)
 				}
 			}
 		}(i)
@@ -60,7 +60,7 @@ func (w *Worker) Start(ctx context.Context, concurrency int) {
 	}
 }
 
-func (w *Worker) process(ctx context.Context, msg amqp.Delivery) {
+func (w *Worker) process(ctx context.Context, msg *amqp.Delivery) {
 	var payload service.TxMessage
 	if err := json.Unmarshal(msg.Body, &payload); err != nil {
 		logger.L.Error("worker: bad message payload", "error", err)

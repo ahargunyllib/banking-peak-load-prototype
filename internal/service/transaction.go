@@ -200,13 +200,6 @@ func (s *transactionService) invalidateBalanceCache(ctx context.Context, account
 	s.redis.Del(ctx, keys...)
 }
 
-// invalidateTxStatusCache removes the cached status entry for a transaction.
-func (s *transactionService) invalidateTxStatusCache(ctx context.Context, txID string) {
-	if s.redis == nil {
-		return
-	}
-	s.redis.Del(ctx, fmt.Sprintf("tx_status:%s", txID))
-}
 
 func (s *transactionService) GetTransactionStatus(ctx context.Context, id string) (*transaction.Transaction, error) {
 	logger.Set(ctx, "transaction_id", id)

@@ -36,7 +36,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("connect: %v", err)
 	}
-	defer conn.Close(ctx)
+	defer func() { _ = conn.Close(ctx) }()
 
 	seedAccounts(ctx, conn)
 	seedTransactions(ctx, conn)

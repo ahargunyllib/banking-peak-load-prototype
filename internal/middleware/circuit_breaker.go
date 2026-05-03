@@ -16,7 +16,7 @@ import (
 // responses and half-opens after CBTimeoutSeconds. When open it immediately
 // returns HTTP 503 without calling the handler. When CIRCUIT_BREAKER_ENABLED
 // is false the middleware is a transparent no-op.
-func CircuitBreaker(cfg config.Config) echo.MiddlewareFunc {
+func CircuitBreaker(cfg *config.Config) echo.MiddlewareFunc {
 	if !cfg.CircuitBreakerEnabled {
 		return func(next echo.HandlerFunc) echo.HandlerFunc { return next }
 	}
