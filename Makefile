@@ -32,6 +32,9 @@ up-optimized:
 down:
 	docker compose --profile optimized down
 
+load-test:
+	k6 run scripts/load-test/optimized.js
+
 logs:
 	docker compose logs -f
 
