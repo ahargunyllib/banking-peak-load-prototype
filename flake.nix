@@ -13,6 +13,7 @@
     devShells."aarch64-darwin".default = pkgs.mkShell {
       packages = [
         pkgs.go_1_25
+        pkgs.k6
       ];
 
       shellHook = ''
