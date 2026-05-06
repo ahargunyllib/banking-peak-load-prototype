@@ -19,9 +19,9 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: '1.25'
 
-      - name: Run Tests
+      - name: Run Test
         run: go test ./...
 
   docker:
@@ -39,35 +39,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Image
-        run: |
-          docker build -t $IMAGE_NAME:latest -f deployments/docker/Dockerfile .
+        run: docker build -t $IMAGE_NAME:latest -f deployments/docker/Dockerfile .
 
       - name: Push Image
-        run: |
-          docker push $IMAGE_NAME:latest
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: docker
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v4
-
-      - name: Setup kubeconfig
-        run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
-
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl apply -f deployments/k8s/
-
-          kubectl set image deployment/banking-app \
-            banking-app=marquisccel/banking-peak-load:latest \
-            -n banking
-
-          kubectl rollout status deployment/banking-app -n banking
+        run: docker push $IMAGE_NAME:latest
