@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: banking-config
+  namespace: banking
+data:
+  APP_ENV: production
+  PORT: "8080"
+
+  ENABLE_REDIS: "true"
+  ENABLE_QUEUE: "true"
+  ENABLE_PGBOUNCER: "true"
+
+  REDIS_TTL: "5m"
