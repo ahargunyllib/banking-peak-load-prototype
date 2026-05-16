@@ -53,8 +53,7 @@ export const options = {
     write_latency:        ['p(95)<2000'],  // p95 write < 2s
     read_balance_latency: ['p(95)<500'],   // p95 read < 500ms (cache hit)
   },
-};
-
+}
 // =========================
 // Helpers
 // =========================
