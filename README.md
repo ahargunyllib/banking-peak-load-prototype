@@ -100,7 +100,15 @@ See [Development Guide](docs/development.md) for the full environment variable r
 ```bash
 # Install Go tooling
 make init
+```
 
+Seed dummy data (100K accounts, 1M transactions):
+
+```bash
+make seed
+```
+
+```bash
 # --- Baseline (API + PostgreSQL only) ---
 cp .env.baseline.example .env
 docker compose up -d
@@ -115,12 +123,6 @@ k6 run scripts/load-test/optimized.js
 docker compose --profile optimized --profile observability up -d
 # Grafana: http://localhost:3000
 # Prometheus: http://localhost:9090
-```
-
-Seed dummy data (100K accounts, 1M transactions):
-
-```bash
-make seed
 ```
 
 ## Makefile Commands
