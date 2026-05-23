@@ -3,10 +3,8 @@ kind: Deployment
 metadata:
   name: banking-app
   namespace: banking
-
 spec:
   replicas: 2
-
   selector:
     matchLabels:
       app: banking-app
@@ -19,7 +17,7 @@ spec:
     spec:
       containers:
         - name: banking-app
-          image: marquisccel/banking-peak-load:latest
+          image: ghcr.io/ahargunyllib/banking-peak-load-prototype:latest
           imagePullPolicy: Always
 
           ports:
@@ -37,7 +35,6 @@ spec:
             httpGet:
               path: /metrics
               port: 8080
-
             initialDelaySeconds: 10
             periodSeconds: 5
 
@@ -45,7 +42,6 @@ spec:
             httpGet:
               path: /metrics
               port: 8080
-
             initialDelaySeconds: 20
             periodSeconds: 10
 
@@ -64,7 +60,6 @@ kind: Service
 metadata:
   name: banking-app
   namespace: banking
-
 spec:
   type: NodePort
 

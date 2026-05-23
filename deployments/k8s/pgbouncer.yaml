@@ -7,6 +7,7 @@ data:
   pgbouncer.ini: |
     [databases]
     banking = host=postgres port=5432 dbname=banking
+    banking_read = host=postgres-replica port=5432 dbname=banking
 
     [pgbouncer]
     listen_addr        = 0.0.0.0
@@ -55,6 +56,33 @@ spec:
           image: edoburu/pgbouncer:v1.25.1-p0
           ports:
             - containerPort: 6432
+              name: pgbouncer
+
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -h
+                - 127.0.0.1
+                - -p
+                - "6432"
+                - -d
+                - banking
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -h
+                - 127.0.0.1
+                - -p
+                - "6432"
+                - -d
+                - banking
+            initialDelaySeconds: 15
+            periodSeconds: 10
 
           volumeMounts:
             - name: config
@@ -76,4 +104,4 @@ spec:
     app: pgbouncer
   ports:
     - port: 6432
-      targetPort: 6432
+      targetPort: pgbouncer
