@@ -30,8 +30,13 @@ test:
 build:
 	go build -o bin/app cmd/server/main.go
 
+ifeq ($(OS),Windows_NT) # Windows' command
+seed:
+	set DB_PRIMARY_DSN=postgres://postgres:postgres@localhost:5432/banking?sslmode=disable&& go run ./cmd/seeds/main.go
+else
 seed:
 	DB_PRIMARY_DSN=postgres://postgres:postgres@localhost:5432/banking?sslmode=disable go run ./cmd/seeds/main.go
+endif
 
 up:
 	cp .env.baseline.example .env
