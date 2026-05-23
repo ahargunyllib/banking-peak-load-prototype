@@ -98,7 +98,7 @@ See [Development Guide](docs/development.md) for the full environment variable r
 
 ## Quick Start
 
-**Prerequisites:** Go 1.25, Docker & Docker Compose v2, k6, Make
+**Prerequisites:** Go 1.25, Docker & Docker Compose v2, k6, Make. For Kubernetes, also install `kubectl` and run a local cluster such as Docker Desktop Kubernetes, minikube, or kind.
 
 ```bash
 # Install Go tooling
@@ -136,6 +136,16 @@ make seed
 | `make test` | Run unit tests (`go test -v ./...`) |
 | `make build` | Compile binary to `bin/app` |
 | `make seed` | Seed 100K accounts + 1M transactions |
+| `make k8s-up` | Apply Kubernetes manifests under `deployments/k8s/` |
+| `make k8s-status` | Show Kubernetes pods, services, and HPA status |
+| `make k8s-logs` | Follow logs from the `banking-app` deployment |
+| `make k8s-port-forward` | Forward the app service to `http://localhost:8080` |
+| `make k8s-port-forward-db` | Forward PostgreSQL to `localhost:15432` for seeding |
+| `make k8s-port-forward-prometheus` | Forward Prometheus to `http://localhost:9090` |
+| `make k8s-port-forward-grafana` | Forward Grafana to `http://localhost:3000` |
+| `make k8s-seed` | Seed data through the forwarded PostgreSQL service |
+| `make k8s-load-test` | Run the optimized k6 script against the forwarded app |
+| `make k8s-down` | Delete the Kubernetes stack |
 
 ## Docker Compose Profiles
 
@@ -150,12 +160,60 @@ make seed
 
 Experimental Kubernetes manifests are included under `deployments/k8s/` for demonstrating the same prototype stack in a cluster. They cover the app, PostgreSQL, PgBouncer, Redis, RabbitMQ, Prometheus, Grafana, ConfigMap/Secret, namespace, and HPA resources.
 
-Review image names, secrets, and environment variables before applying them to a cluster:
+Start a local cluster first, then apply the stack:
 
 ```bash
-kubectl apply -f deployments/k8s/namespace.yaml
-kubectl apply -f deployments/k8s/
+make k8s-up
+make k8s-status
 ```
+
+Expose the API locally in one terminal:
+
+```bash
+make k8s-port-forward
+```
+
+Then test the service from another terminal:
+
+```bash
+curl http://localhost:8080/metrics
+curl http://localhost:8080/api/v1/accounts/1001/balance
+```
+
+Seed dummy data by forwarding PostgreSQL in another terminal:
+
+```bash
+make k8s-port-forward-db
+```
+
+Then run:
+
+```bash
+make k8s-seed
+```
+
+Run the optimized load test against the Kubernetes app:
+
+```bash
+make k8s-load-test
+```
+
+Optional observability port-forwards:
+
+```bash
+make k8s-port-forward-prometheus
+make k8s-port-forward-grafana
+```
+
+Grafana is available at `http://localhost:3000` with `admin` / `admin`.
+
+Clean up the Kubernetes stack:
+
+```bash
+make k8s-down
+```
+
+Review image names, secrets, and environment variables before applying the manifests to a shared cluster. The app manifest currently pulls `ghcr.io/ahargunyllib/banking-peak-load-prototype:latest`; for local code changes, build and publish an image your cluster can pull, or load the image into your local cluster and update `deployments/k8s/app.yaml`. The HPA requires `metrics-server`; without it, the app still runs, but autoscaling metrics will not be available.
 
 ## SLO Targets
 
