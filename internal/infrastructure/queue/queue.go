@@ -50,7 +50,7 @@ func declareQueues(ch *amqp.Channel) error {
 		return fmt.Errorf("declare dlq: %w", err)
 	}
 	args := amqp.Table{
-		"x-dead-letter-exchange": "",
+		"x-dead-letter-exchange":    "",
 		"x-dead-letter-routing-key": "transactions.dlq",
 	}
 	if _, err := ch.QueueDeclare("transactions", true, false, false, false, args); err != nil {
@@ -95,6 +95,30 @@ func (c *Client) Publish(ctx context.Context, queue string, body []byte) error {
 			Body:         body,
 			DeliveryMode: amqp.Persistent,
 		})
+}
+
+func (c *Client) QueueDepth(queueName string) (int, error) {
+	c.mu.Lock()
+	if c.conn == nil || c.conn.IsClosed() {
+		if err := c.dial(); err != nil {
+			c.mu.Unlock()
+			return 0, err
+		}
+	}
+	conn := c.conn
+	c.mu.Unlock()
+
+	ch, err := conn.Channel()
+	if err != nil {
+		return 0, fmt.Errorf("open inspect channel: %w", err)
+	}
+	defer ch.Close()
+
+	state, err := ch.QueueInspect(queueName)
+	if err != nil {
+		return 0, fmt.Errorf("inspect queue %q: %w", queueName, err)
+	}
+	return state.Messages, nil
 }
 
 // Consume registers a consumer on the given queue and returns the delivery channel.

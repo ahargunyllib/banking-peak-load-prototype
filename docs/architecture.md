@@ -137,12 +137,15 @@ CREATE INDEX idx_transactions_status ON transactions(status) WHERE status = 'pen
 ## Observability
 
 ### Metrics (Prometheus)
-- `http_requests_total{method, path, status}` — Counter
-- `http_request_duration_seconds{method, path}` — Histogram
+- `banking_api_requests_total{method, url, code}` — Counter
+- `banking_api_request_duration_seconds{method, url, code}` — Histogram
+- `rate_limiter_drops_total{scope}` — Counter
 - `cache_hits_total{key_type}` / `cache_misses_total{key_type}` — Counter
-- `queue_depth` — Gauge
+- `queue_depth{queue}` — Gauge
 - `circuit_breaker_state{dependency}` — Gauge (0=closed, 1=open, 2=half-open)
+- `dependency_up{dependency}` — Gauge (1=up, 0=down)
 - `db_connections_active` / `db_connections_idle` — Gauge
+- `app_cpu_utilization_ratio` / `app_memory_utilization_ratio` — Gauge
 
 ### Structured Logging
 Every log line is JSON with at minimum:

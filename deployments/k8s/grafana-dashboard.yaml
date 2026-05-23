@@ -47,7 +47,7 @@ data:
           },
           "targets": [
             {
-              "expr": "sum(rate(http_requests_total{job=\"banking-api\"}[1m]))",
+              "expr": "sum(rate(banking_api_requests_total{job=\"banking-api\",url!=\"/metrics\"}[1m]))",
               "legendFormat": "TPS",
               "refId": "A"
             }
@@ -84,7 +84,7 @@ data:
           },
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"banking-api\"}[5m])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(banking_api_request_duration_seconds_bucket{job=\"banking-api\",url!=\"/metrics\"}[5m])) by (le))",
               "legendFormat": "P95",
               "refId": "A"
             }
@@ -121,7 +121,7 @@ data:
           },
           "targets": [
             {
-              "expr": "sum(rate(http_requests_total{job=\"banking-api\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"banking-api\"}[5m]))",
+              "expr": "sum(rate(banking_api_requests_total{job=\"banking-api\",code=~\"5..\",url!=\"/metrics\"}[5m])) / clamp_min(sum(rate(banking_api_requests_total{job=\"banking-api\",url!=\"/metrics\"}[5m])), 0.001)",
               "legendFormat": "Error Rate",
               "refId": "A"
             }
@@ -158,9 +158,14 @@ data:
           },
           "targets": [
             {
-              "expr": "avg_over_time(up{job=~\"banking-api|postgres\"}[24h])",
-              "legendFormat": "{{ job }}",
+              "expr": "avg_over_time(up{job=\"banking-api\"}[24h])",
+              "legendFormat": "API Gateway",
               "refId": "A"
+            },
+            {
+              "expr": "avg_over_time(dependency_up{job=\"banking-api\",dependency=\"database\"}[24h])",
+              "legendFormat": "Database",
+              "refId": "B"
             }
           ]
         },
@@ -195,7 +200,7 @@ data:
           },
           "targets": [
             {
-              "expr": "sum(rate(http_requests_total{job=\"banking-api\",status=\"429\"}[1m]))",
+              "expr": "sum(rate(rate_limiter_drops_total{job=\"banking-api\"}[1m]))",
               "legendFormat": "Dropped Requests",
               "refId": "A"
             }
@@ -235,7 +240,7 @@ data:
           },
           "targets": [
             {
-              "expr": "redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total)",
+              "expr": "sum(rate(cache_hits_total{job=\"banking-api\",key_type=~\"balance|tx_status\"}[5m])) / clamp_min(sum(rate(cache_hits_total{job=\"banking-api\",key_type=~\"balance|tx_status\"}[5m])) + sum(rate(cache_misses_total{job=\"banking-api\",key_type=~\"balance|tx_status\"}[5m])), 0.001)",
               "legendFormat": "Cache Hit Ratio",
               "refId": "A"
             }
@@ -273,7 +278,7 @@ data:
           },
           "targets": [
             {
-              "expr": "rabbitmq_queue_messages{vhost=\"/\"}",
+              "expr": "queue_depth{job=\"banking-api\",queue=\"transactions\"}",
               "legendFormat": "{{ queue }}",
               "refId": "A"
             }
@@ -294,9 +299,9 @@ data:
                 "fillOpacity": 10
               },
               "mappings": [
-                { "type": "value", "options": { "0": { "text": "CLOSED ✅", "color": "green" } } },
-                { "type": "value", "options": { "1": { "text": "OPEN 🔴", "color": "red" } } },
-                { "type": "value", "options": { "2": { "text": "HALF-OPEN 🟡", "color": "yellow" } } }
+                { "type": "value", "options": { "0": { "text": "CLOSED", "color": "green" } } },
+                { "type": "value", "options": { "1": { "text": "OPEN", "color": "red" } } },
+                { "type": "value", "options": { "2": { "text": "HALF-OPEN", "color": "yellow" } } }
               ]
             },
             "overrides": []
@@ -307,8 +312,8 @@ data:
           },
           "targets": [
             {
-              "expr": "circuit_breaker_state{job=\"banking-api\"}",
-              "legendFormat": "{{ name }}",
+              "expr": "circuit_breaker_state{job=\"banking-api\",dependency=\"api\"}",
+              "legendFormat": "{{ dependency }}",
               "refId": "A"
             }
           ]
@@ -353,7 +358,7 @@ data:
           },
           "targets": [
             {
-              "expr": "pgbouncer_pools_client_active_connections",
+              "expr": "db_connections_active{job=\"banking-api\"}",
               "legendFormat": "Active Connections",
               "refId": "A"
             },
@@ -395,8 +400,8 @@ data:
           },
           "targets": [
             {
-              "expr": "pgbouncer_pools_client_active_connections",
-              "legendFormat": "{{ database }}",
+              "expr": "db_connections_active{job=\"banking-api\"}",
+              "legendFormat": "Active Connections",
               "refId": "A"
             }
           ]
@@ -434,13 +439,13 @@ data:
           },
           "targets": [
             {
-              "expr": "sum(rate(container_cpu_usage_seconds_total{name=~\".+\"}[1m])) by (name)",
-              "legendFormat": "CPU: {{ name }}",
+              "expr": "app_cpu_utilization_ratio{job=\"banking-api\"}",
+              "legendFormat": "CPU: API",
               "refId": "A"
             },
             {
-              "expr": "container_memory_usage_bytes{name=~\".+\"} / container_spec_memory_limit_bytes{name=~\".+\"}",
-              "legendFormat": "MEM: {{ name }}",
+              "expr": "app_memory_utilization_ratio{job=\"banking-api\"}",
+              "legendFormat": "MEM: API",
               "refId": "B"
             }
           ]
@@ -476,13 +481,13 @@ data:
           },
           "targets": [
             {
-              "expr": "sum(rate(container_cpu_usage_seconds_total{name=~\".+\"}[1m])) by (name)",
-              "legendFormat": "CPU: {{ name }}",
+              "expr": "app_cpu_utilization_ratio{job=\"banking-api\"}",
+              "legendFormat": "CPU: API",
               "refId": "A"
             },
             {
-              "expr": "container_memory_usage_bytes{name=~\".+\"} / container_spec_memory_limit_bytes{name=~\".+\"}",
-              "legendFormat": "MEM: {{ name }}",
+              "expr": "app_memory_utilization_ratio{job=\"banking-api\"}",
+              "legendFormat": "MEM: API",
               "refId": "B"
             }
           ]
