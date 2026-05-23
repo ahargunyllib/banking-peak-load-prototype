@@ -15,5 +15,5 @@
 
 ## Phase 3 — Observability
 - [x] Prometheus scrape config (`deployments/prometheus/prometheus.yml`)
-- [ ] Grafana dashboard provisioning (TPS, p95 latency, error rate, cache hit rate)
+- [x] Grafana dashboard provisioning (TPS, p95 latency, error rate, cache hit rate)
 - [ ] k6 optimized load test script (`scripts/load-test/optimized.js`)
