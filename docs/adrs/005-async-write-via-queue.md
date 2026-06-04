@@ -29,9 +29,9 @@ Start with RabbitMQ for clear separation of concerns (cache vs queue). If team f
 ```
 Client POST /transactions
   → API validates input
-  → Generate transaction ID (nanoid with prefix, e.g., tx_01J...)
+  → Generate transaction ID (txn prefix with 22 digits, e.g., txn0000000000000000000001)
   → Insert to queue: {tx_id, source, dest, amount}
-  → Return HTTP 202 {transaction_id: "tx_01J...", status: "pending"}
+  → Return HTTP 202 {"id": "txn0000000000000000000001", "status": "pending"}
 
 Worker (N concurrent):
   → Dequeue message

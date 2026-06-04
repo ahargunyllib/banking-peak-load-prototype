@@ -22,10 +22,12 @@ Thumbs.db
 # Environment
 .env
 .env.local
+.env.cloud
 .env.*
 !.env.example
 !.env.baseline.example
 !.env.optimized.example
+!.env.cloud.example
 
 # Docker volumes
 data/
@@ -41,3 +43,20 @@ tmp/
 # Coverage reports
 coverage.out
 coverage.html
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.lock.hcl
+
+# Archives / local installers
+*.zip
+*.deb

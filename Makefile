@@ -11,7 +11,8 @@ K8S_DB_DSN ?= postgres://postgres:postgres@localhost:$(K8S_DB_PORT)/banking?sslm
         k8s-up k8s-down k8s-status k8s-logs \
         k8s-port-forward k8s-port-forward-db \
         k8s-port-forward-prometheus k8s-port-forward-grafana \
-        k8s-seed k8s-load-test
+        k8s-seed k8s-load-test \
+        cloud-demo cloud-load-test cloud-health cloud-logs cloud-cleanup
 
 init:
 	go mod download
@@ -89,3 +90,23 @@ k8s-seed:
 
 k8s-load-test:
 	BASE_URL=$(K8S_BASE_URL) k6 run scripts/load-test/mixed.js
+
+ifneq (,$(wildcard .env.cloud))
+include .env.cloud
+export
+endif
+
+cloud-demo:
+	bash scripts/cloud/demo.sh
+
+cloud-load-test:
+	bash scripts/cloud/loadtest.sh
+
+cloud-health:
+	bash scripts/cloud/health.sh
+
+cloud-logs:
+	bash scripts/cloud/logs.sh
+
+cloud-cleanup:
+	bash scripts/cloud/cleanup.sh

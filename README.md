@@ -71,6 +71,7 @@ Client
 | Load Testing | k6 |
 | Infrastructure | Docker Compose |
 | Optional Orchestration | Kubernetes manifests (`deployments/k8s/`) |
+| Optional Cloud Demo | Terraform AWS EC2 demo + Ansible automation |
 | CI | GitHub Actions |
 | Dev tooling | air (live reload), golangci-lint, Nix flake |
 
@@ -93,6 +94,7 @@ All protection/optimization layers are toggled via environment variables. Baseli
 | `RATE_LIMIT_ENABLED` | `false` | Token bucket rate limiting |
 | `CIRCUIT_BREAKER_ENABLED` | `false` | Fail-fast on unhealthy downstream |
 | `DB_READ_REPLICA_ENABLED` | `false` | Route reads to replica |
+| `APP_MEMORY_LIMIT_BYTES` | `512MiB fallback` | Optional memory limit used by app runtime utilization metrics |
 
 See [Development Guide](docs/development.md) for the full environment variable reference.
 
@@ -237,6 +239,28 @@ make k8s-down
 
 Review image names, secrets, and environment variables before applying the manifests to a shared cluster. The app manifest currently pulls `ghcr.io/ahargunyllib/banking-peak-load-prototype:latest`; for local code changes, build and publish an image your cluster can pull, or load the image into your local cluster and update `deployments/k8s/app.yaml`. The HPA requires `metrics-server`; without it, the app still runs, but autoscaling metrics will not be available.
 
+## Cloud Demo
+
+The repo also includes an optional AWS EC2 demo under `deployments/terraform/cloud-demo/` plus Ansible playbooks under `deployments/ansible/`. These files are for demonstration and presentation runs, not for production banking infrastructure.
+
+```bash
+cp .env.cloud.example .env.cloud
+cd deployments/terraform/cloud-demo
+cp terraform.tfvars.example terraform.tfvars
+terraform init
+terraform plan
+```
+
+After Terraform provisions hosts, use the dynamic inventory and Ansible playbooks to configure the app and k6 runner:
+
+```bash
+cd ../../..
+ansible-playbook -i deployments/ansible/inventories/terraform_inventory.py deployments/ansible/site.yml
+ansible-playbook -i deployments/ansible/inventories/terraform_inventory.py deployments/ansible/deploy.yml
+```
+
+Helper scripts for cloud demo operations live in `scripts/cloud/`.
+
 ## SLO Targets
 
 | Metric | Baseline | Optimized |
@@ -250,15 +274,23 @@ Review image names, secrets, and environment variables before applying the manif
 
 ## Load Test Evidence
 
-The PR also includes captured screenshots for the optimized demonstration run.
+The repo includes captured screenshots for optimized Kubernetes and cloud demonstration runs.
 
-Grafana dashboard:
+Kubernetes Grafana dashboard:
 
-![Grafana dashboard](docs/grafana-screenshot.jpeg)
+![Kubernetes Grafana dashboard](docs/k8s-grafana.png)
 
-k6 load test:
+Kubernetes k6 load test:
 
-![k6 load test](docs/k6-loadtest-screenshot.jpeg)
+![Kubernetes k6 load test](docs/k8s-k6.png)
+
+Cloud Grafana dashboard:
+
+![Cloud Grafana dashboard](docs/cloud-grafana.png)
+
+Cloud k6 load test:
+
+![Cloud k6 load test](docs/cloud-k6.jpeg)
 
 ## Project Structure
 
@@ -277,12 +309,16 @@ banking-peak-load-prototype/
 ├── seeds/                     # Dummy data generation
 ├── scripts/
 │   ├── load-test/             # k6 scripts (mixed, write-only, spike, sustained)
+│   ├── cloud/                 # Cloud demo helpers
 │   └── setup/                 # Helper scripts (seed, wait-for-db)
 ├── deployments/
+│   ├── ansible/               # Ansible automation for cloud demo hosts
 │   ├── docker/                # Dockerfiles
+│   ├── k8s/                   # Kubernetes manifests
 │   ├── pgbouncer/             # PgBouncer config
 │   ├── prometheus/            # prometheus.yml
-│   └── grafana/               # Dashboard JSON provisioning
+│   ├── grafana/               # Dashboard JSON provisioning
+│   └── terraform/             # Terraform cloud demo
 ├── docs/                      # All documentation
 ├── Makefile
 └── docker-compose.yml

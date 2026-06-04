@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/ahargunyllib/banking-peak-load-prototype/internal/domain/transaction"
@@ -18,6 +19,8 @@ import (
 
 var ErrInsufficientFunds = errors.New("insufficient funds")
 var ErrAccountNotFound = errors.New("account not found")
+
+var txSequence atomic.Uint64
 
 type CreateTransactionInput struct {
 	SourceAccount int64
@@ -63,7 +66,7 @@ func (s *transactionService) CreateTransaction(ctx context.Context, input Create
 
 	now := time.Now()
 	tx := &transaction.Transaction{
-		ID:            fmt.Sprintf("tx_%d", now.UnixNano()),
+		ID:            newTransactionID(now),
 		SourceAccount: input.SourceAccount,
 		DestAccount:   input.DestAccount,
 		Amount:        input.Amount,
@@ -92,6 +95,11 @@ func (s *transactionService) CreateTransaction(ctx context.Context, input Create
 	logger.Set(ctx, "transaction_id", tx.ID)
 	logger.Set(ctx, "transaction_status", tx.Status)
 	return tx, nil
+}
+
+func newTransactionID(now time.Time) string {
+	sequence := txSequence.Add(1) % 1000
+	return fmt.Sprintf("txn%019d%03d", now.UnixNano(), sequence)
 }
 
 // createSync executes an atomic DB transaction: balance check → debit → credit → insert.
@@ -199,7 +207,6 @@ func (s *transactionService) invalidateBalanceCache(ctx context.Context, account
 	}
 	s.redis.Del(ctx, keys...)
 }
-
 
 func (s *transactionService) GetTransactionStatus(ctx context.Context, id string) (*transaction.Transaction, error) {
 	logger.Set(ctx, "transaction_id", id)
