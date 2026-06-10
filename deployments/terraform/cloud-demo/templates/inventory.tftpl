@@ -1,0 +1,13 @@
+[app_servers]
+app_server ansible_host=${app_public_ip} ansible_user=${ssh_user}
+
+[k6_runners]
+k6_runner ansible_host=${k6_public_ip} ansible_user=${ssh_user}
+
+[cloud:children]
+app_servers
+k6_runners
+
+[all:vars]
+ansible_ssh_private_key_file=${private_key_path}
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'

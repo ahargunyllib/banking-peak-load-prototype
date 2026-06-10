@@ -1,0 +1,29 @@
+---
+- name: Show cloud demo evidence
+  hosts: app_servers
+  gather_facts: false
+  vars_files:
+    - ../vars/app.yml
+    - ../vars/infra.yml
+
+  tasks:
+    - name: Show app stack status
+      ansible.builtin.command:
+        cmd: docker compose ps
+        chdir: "{{ app_dir }}"
+      become: true
+      register: compose_ps
+      changed_when: false
+
+    - name: Check metrics endpoint
+      ansible.builtin.uri:
+        url: "http://localhost:{{ app_port }}/metrics"
+        status_code: 200
+
+    - name: Show service URLs and stack status
+      ansible.builtin.debug:
+        msg:
+          - "API: {{ api_url }}"
+          - "Grafana: {{ grafana_url }}"
+          - "Prometheus: {{ prometheus_url }}"
+          - "{{ compose_ps.stdout_lines }}"

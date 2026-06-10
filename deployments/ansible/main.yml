@@ -1,0 +1,5 @@
+---
+- import_playbook: playbooks/00-common-setup.yml
+- import_playbook: playbooks/01-app-server.yml
+- import_playbook: playbooks/02-k6-runner.yml
+- import_playbook: playbooks/03-show-evidence.yml

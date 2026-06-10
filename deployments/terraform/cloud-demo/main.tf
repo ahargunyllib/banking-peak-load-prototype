@@ -6,6 +6,11 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.5"
+    }
   }
 }
 
@@ -56,6 +61,14 @@ resource "aws_security_group" "app_server" {
     to_port     = 8080
     protocol    = "tcp"
     cidr_blocks = [var.public_access_cidr]
+  }
+
+  ingress {
+    description     = "Banking API from k6 runner"
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.k6_runner.id]
   }
 
   ingress {
@@ -122,10 +135,6 @@ resource "aws_instance" "app_server" {
   vpc_security_group_ids      = [aws_security_group.app_server.id]
   associate_public_ip_address = true
 
-  user_data = templatefile("${path.module}/user_data_app.sh", {
-    repo_url = var.repo_url
-  })
-
   root_block_device {
     volume_size = 25
     volume_type = "gp3"
@@ -144,11 +153,6 @@ resource "aws_instance" "k6_runner" {
   vpc_security_group_ids      = [aws_security_group.k6_runner.id]
   associate_public_ip_address = true
 
-  user_data = templatefile("${path.module}/user_data_k6.sh", {
-    repo_url     = var.repo_url
-    app_base_url = "http://${aws_instance.app_server.public_ip}:8080"
-  })
-
   root_block_device {
     volume_size = 20
     volume_type = "gp3"
@@ -160,4 +164,38 @@ resource "aws_instance" "k6_runner" {
     Name    = "${var.project_name}-k6-runner"
     Project = var.project_name
   }
+}
+
+locals {
+  ansible_inventory_path = "${path.module}/../../ansible/inventory/hosts.ini"
+  ansible_vars_path      = "${path.module}/../../ansible/vars/infra.yml"
+}
+
+resource "local_file" "ansible_inventory" {
+  content = templatefile("${path.module}/templates/inventory.tftpl", {
+    app_public_ip    = aws_instance.app_server.public_ip
+    k6_public_ip     = aws_instance.k6_runner.public_ip
+    private_key_path = var.private_key_path
+    ssh_user         = var.ssh_user
+  })
+
+  filename = local.ansible_inventory_path
+}
+
+resource "local_file" "ansible_vars" {
+  content = templatefile("${path.module}/templates/infra.yml.tftpl", {
+    app_base_url   = "http://${aws_instance.app_server.private_ip}:8080"
+    app_private_ip = aws_instance.app_server.private_ip
+    app_public_ip  = aws_instance.app_server.public_ip
+    api_url        = "http://${aws_instance.app_server.public_ip}:8080"
+    grafana_url    = "http://${aws_instance.app_server.public_ip}:3000"
+    k6_private_ip  = aws_instance.k6_runner.private_ip
+    k6_public_ip   = aws_instance.k6_runner.public_ip
+    prometheus_url = "http://${aws_instance.app_server.public_ip}:9090"
+    repo_url       = var.repo_url
+    repo_version   = var.repo_version
+    ssh_user       = var.ssh_user
+  })
+
+  filename = local.ansible_vars_path
 }

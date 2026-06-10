@@ -1,9 +1,6 @@
 ---
-# deployments/ansible/group_vars/app_servers.yml
-
-repo_url: "https://github.com/ahargunyllib/banking-peak-load-prototype.git"
 docker_compose_version: "v2.29.7"
-app_dir: "/home/ubuntu/banking-peak-load-prototype"
+app_dir: "/home/{{ ssh_user }}/banking-peak-load-prototype"
 
 app_port: 8080
 app_env: production
@@ -31,3 +28,14 @@ queue_workers: "10"
 
 expected_accounts: 100000
 expected_transactions: 1000000
+loadtest_timeout_seconds: 1800
+loadtest_poll_retries: 120
+loadtest_poll_delay_seconds: 15
+
+loadtest_scripts:
+  mixed: scripts/load-test/mixed.js
+  optimized: scripts/load-test/optimized.js
+  spike: scripts/load-test/spike.js
+  full: scripts/load-test/full.js
+  rampup: scripts/load-test/rampup.js
+  sustained: scripts/load-test/sustained.js

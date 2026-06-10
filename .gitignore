@@ -22,12 +22,10 @@ Thumbs.db
 # Environment
 .env
 .env.local
-.env.cloud
 .env.*
 !.env.example
 !.env.baseline.example
 !.env.optimized.example
-!.env.cloud.example
 
 # Docker volumes
 data/
@@ -49,6 +47,7 @@ coverage.html
 *.tfstate
 *.tfstate.*
 *.tfvars
+tfplan
 crash.log
 crash.*.log
 override.tf
@@ -60,3 +59,7 @@ override.tf.json
 # Archives / local installers
 *.zip
 *.deb
+
+# Generated Ansible cloud handoff
+deployments/ansible/inventory/hosts.ini
+deployments/ansible/vars/infra.yml

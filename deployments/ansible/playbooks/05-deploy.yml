@@ -1,0 +1,55 @@
+---
+- name: Update app server on existing cloud hosts
+  hosts: app_servers
+  gather_facts: false
+  vars_files:
+    - ../vars/app.yml
+    - ../vars/infra.yml
+
+  tasks:
+    - name: Pull latest app code
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: "{{ repo_version }}"
+        update: true
+        force: false
+
+    - name: Template app environment
+      ansible.builtin.template:
+        src: ../templates/app.env.j2
+        dest: "{{ app_dir }}/.env"
+        owner: "{{ ssh_user }}"
+        group: "{{ ssh_user }}"
+        mode: "0640"
+
+    - name: Rebuild and restart app service
+      ansible.builtin.command:
+        cmd: docker compose up -d --build --no-deps app
+        chdir: "{{ app_dir }}"
+      become: true
+
+    - name: Wait for app to be healthy
+      ansible.builtin.uri:
+        url: "http://localhost:{{ app_port }}/metrics"
+        status_code: 200
+      register: health
+      until: health.status == 200
+      retries: 12
+      delay: 5
+
+- name: Update k6 runner repo
+  hosts: k6_runners
+  gather_facts: false
+  vars_files:
+    - ../vars/app.yml
+    - ../vars/infra.yml
+
+  tasks:
+    - name: Pull latest load-test code
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: "{{ repo_version }}"
+        update: true
+        force: false

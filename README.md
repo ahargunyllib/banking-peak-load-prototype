@@ -246,37 +246,35 @@ The repo also includes an optional AWS EC2 demo under `deployments/terraform/clo
 For the safest step-by-step flow, use the dedicated [Cloud Demo Runbook](deployments/terraform/cloud-demo/README-cloud-demo.md). The shorter version below assumes commands are run from a Linux/WSL shell and from the paths shown.
 
 ```bash
-cp .env.cloud.example .env.cloud
-cd deployments/terraform/cloud-demo
-cp terraform.tfvars.example terraform.tfvars
-terraform init
-terraform plan
+cp deployments/terraform/cloud-demo/terraform.tfvars.example deployments/terraform/cloud-demo/terraform.tfvars
+make cloud-plan
 ```
 
-After Terraform provisions hosts, use the dynamic inventory and Ansible playbooks to configure the app and k6 runner:
+Deploy the full demo. Terraform provisions EC2 and writes the Ansible inventory/vars, then Ansible configures the app and k6 runner:
 
 ```bash
-cd ../../ansible
-chmod +x inventories/terraform_inventory.py
-ansible all -i inventories/terraform_inventory.py -m ping
-ansible-playbook -i inventories/terraform_inventory.py site.yml -e seed=true
+make cloud-demo
 ```
 
 For repeat deploys on existing EC2 instances:
 
 ```bash
-ansible-playbook -i inventories/terraform_inventory.py deploy.yml
+make cloud-update
 ```
 
 Run cloud load tests from the k6 runner through Ansible:
 
 ```bash
-ansible-playbook -i inventories/terraform_inventory.py loadtest.yml -e loadtest_script=run-status.sh
-ansible-playbook -i inventories/terraform_inventory.py loadtest.yml
-ansible-playbook -i inventories/terraform_inventory.py loadtest.yml -e loadtest_script=run-spike.sh
+make cloud-load-status
+make cloud-load-test
+make cloud-load-spike
 ```
 
-`loadtest.yml` stops previous `k6 run` processes before starting a new load test, and the templated runner scripts clean up their child k6 process on interruption. Legacy SSH helper scripts for manual operations live in `scripts/cloud/`.
+`cloud-load-test` stops previous `k6 run` processes before starting a new load test. Destroy the temporary AWS resources when the demo is done:
+
+```bash
+make cloud-destroy
+```
 
 ## SLO Targets
 

@@ -23,8 +23,23 @@ variable "public_key_path" {
   default = "~/.ssh/id_rsa.pub"
 }
 
+variable "private_key_path" {
+  type    = string
+  default = "~/.ssh/id_rsa"
+}
+
+variable "ssh_user" {
+  type    = string
+  default = "ubuntu"
+}
+
 variable "repo_url" {
   type = string
+}
+
+variable "repo_version" {
+  type    = string
+  default = "main"
 }
 
 variable "ssh_cidr" {

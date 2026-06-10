@@ -1,0 +1,68 @@
+---
+- name: Configure k6 load-test runner
+  hosts: k6_runners
+  gather_facts: false
+  vars_files:
+    - ../vars/app.yml
+    - ../vars/infra.yml
+
+  tasks:
+    - name: Add k6 apt key
+      ansible.builtin.shell: |
+        set -euo pipefail
+        curl -fsSL https://dl.k6.io/key.gpg | gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+      args:
+        executable: /bin/bash
+        creates: /usr/share/keyrings/k6-archive-keyring.gpg
+      become: true
+
+    - name: Add k6 apt repository
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/k6.list
+        content: "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main\n"
+        owner: root
+        group: root
+        mode: "0644"
+      become: true
+      register: k6_repo
+
+    - name: Update apt cache after adding k6 repository
+      ansible.builtin.apt:
+        update_cache: true
+      become: true
+      when: k6_repo.changed
+
+    - name: Install k6
+      ansible.builtin.apt:
+        name: k6
+        state: present
+      become: true
+
+    - name: Clone or update repo
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: "{{ repo_version }}"
+        update: true
+        force: false
+
+    - name: Fix repo ownership
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        owner: "{{ ssh_user }}"
+        group: "{{ ssh_user }}"
+        recurse: true
+      become: true
+
+    - name: Wait until app target is reachable from k6 runner
+      ansible.builtin.uri:
+        url: "{{ app_base_url }}/metrics"
+        status_code: 200
+      register: app_target_check
+      until: app_target_check.status == 200
+      retries: 60
+      delay: 5
+
+    - name: Print k6 target URL
+      ansible.builtin.debug:
+        msg: "k6 runner is ready. Target: {{ app_base_url }}"
