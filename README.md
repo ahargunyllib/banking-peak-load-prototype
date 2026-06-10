@@ -243,6 +243,8 @@ Review image names, secrets, and environment variables before applying the manif
 
 The repo also includes an optional AWS EC2 demo under `deployments/terraform/cloud-demo/` plus Ansible playbooks under `deployments/ansible/`. These files are for demonstration and presentation runs, not for production banking infrastructure.
 
+For the safest step-by-step flow, use the dedicated [Cloud Demo Runbook](deployments/terraform/cloud-demo/README-cloud-demo.md). The shorter version below assumes commands are run from a Linux/WSL shell and from the paths shown.
+
 ```bash
 cp .env.cloud.example .env.cloud
 cd deployments/terraform/cloud-demo
@@ -254,12 +256,27 @@ terraform plan
 After Terraform provisions hosts, use the dynamic inventory and Ansible playbooks to configure the app and k6 runner:
 
 ```bash
-cd ../../..
-ansible-playbook -i deployments/ansible/inventories/terraform_inventory.py deployments/ansible/site.yml
-ansible-playbook -i deployments/ansible/inventories/terraform_inventory.py deployments/ansible/deploy.yml
+cd ../../ansible
+chmod +x inventories/terraform_inventory.py
+ansible all -i inventories/terraform_inventory.py -m ping
+ansible-playbook -i inventories/terraform_inventory.py site.yml -e seed=true
 ```
 
-Helper scripts for cloud demo operations live in `scripts/cloud/`.
+For repeat deploys on existing EC2 instances:
+
+```bash
+ansible-playbook -i inventories/terraform_inventory.py deploy.yml
+```
+
+Run cloud load tests from the k6 runner through Ansible:
+
+```bash
+ansible-playbook -i inventories/terraform_inventory.py loadtest.yml -e loadtest_script=run-status.sh
+ansible-playbook -i inventories/terraform_inventory.py loadtest.yml
+ansible-playbook -i inventories/terraform_inventory.py loadtest.yml -e loadtest_script=run-spike.sh
+```
+
+`loadtest.yml` stops previous `k6 run` processes before starting a new load test, and the templated runner scripts clean up their child k6 process on interruption. Legacy SSH helper scripts for manual operations live in `scripts/cloud/`.
 
 ## SLO Targets
 
