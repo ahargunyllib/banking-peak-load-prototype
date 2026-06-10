@@ -1,0 +1,41 @@
+---
+docker_compose_version: "v2.29.7"
+app_dir: "/home/{{ ssh_user }}/banking-peak-load-prototype"
+
+app_port: 8080
+app_env: production
+
+cache_enabled: "true"
+queue_enabled: "true"
+rate_limit_enabled: "true"
+rate_limit_rps: "1000"
+rate_limit_burst: "2000"
+circuit_breaker_enabled: "true"
+cb_max_failures: "5"
+cb_timeout_seconds: "10"
+
+db_read_replica_enabled: "false"
+db_primary_dsn: "postgres://postgres:postgres@postgres:5432/banking?sslmode=disable"
+pgbouncer_dsn: "postgres://postgres:postgres@pgbouncer:6432/banking?sslmode=disable"
+pgbouncer_read_dsn: "postgres://postgres:postgres@pgbouncer:6432/banking?sslmode=disable"
+
+redis_addr: "redis:6379"
+cache_balance_ttl: "10s"
+cache_tx_status_ttl: "30s"
+
+queue_url: "amqp://guest:guest@rabbitmq:5672/"
+queue_workers: "10"
+
+expected_accounts: 100000
+expected_transactions: 1000000
+loadtest_timeout_seconds: 1800
+loadtest_poll_retries: 120
+loadtest_poll_delay_seconds: 15
+
+loadtest_scripts:
+  mixed: scripts/load-test/mixed.js
+  optimized: scripts/load-test/optimized.js
+  spike: scripts/load-test/spike.js
+  full: scripts/load-test/full.js
+  rampup: scripts/load-test/rampup.js
+  sustained: scripts/load-test/sustained.js

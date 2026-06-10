@@ -1,0 +1,12 @@
+---
+app_base_url: "http://10.0.0.10:8080"
+app_private_ip: "10.0.0.10"
+app_public_ip: "203.0.113.10"
+api_url: "http://203.0.113.10:8080"
+grafana_url: "http://203.0.113.10:3000"
+k6_private_ip: "10.0.0.20"
+k6_public_ip: "203.0.113.20"
+prometheus_url: "http://203.0.113.10:9090"
+repo_url: "https://github.com/ahargunyllib/banking-peak-load-prototype.git"
+repo_version: "main"
+ssh_user: "ubuntu"

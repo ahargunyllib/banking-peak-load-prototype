@@ -1,0 +1,147 @@
+---
+- name: Configure banking app server
+  hosts: app_servers
+  gather_facts: false
+  vars_files:
+    - ../vars/app.yml
+    - ../vars/infra.yml
+
+  tasks:
+    - name: Clone or update repo
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: "{{ repo_version }}"
+        update: true
+        force: false
+
+    - name: Fix repo ownership
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        owner: "{{ ssh_user }}"
+        group: "{{ ssh_user }}"
+        recurse: true
+      become: true
+
+    - name: Template app environment
+      ansible.builtin.template:
+        src: ../templates/app.env.j2
+        dest: "{{ app_dir }}/.env"
+        owner: "{{ ssh_user }}"
+        group: "{{ ssh_user }}"
+        mode: "0640"
+
+    - name: Pull latest Docker images
+      ansible.builtin.command:
+        cmd: docker compose --profile optimized --profile observability pull --ignore-buildable
+        chdir: "{{ app_dir }}"
+      become: true
+      register: pull_result
+      changed_when: "'Pull complete' in pull_result.stdout or 'Downloaded' in pull_result.stdout"
+
+    - name: Start full stack
+      ansible.builtin.command:
+        cmd: docker compose --profile optimized --profile observability up -d --build
+        chdir: "{{ app_dir }}"
+      become: true
+      register: compose_up
+      changed_when: "'Started' in compose_up.stdout or 'Created' in compose_up.stdout or 'Recreated' in compose_up.stdout"
+
+    - name: Wait for API metrics endpoint
+      ansible.builtin.uri:
+        url: "http://localhost:{{ app_port }}/metrics"
+        status_code: 200
+      register: metrics_check
+      until: metrics_check.status == 200
+      retries: 24
+      delay: 5
+
+    - name: Seed accounts and transactions
+      ansible.builtin.command:
+        cmd: >
+          docker compose exec -T postgres psql
+          -v ON_ERROR_STOP=1
+          -U postgres -d banking
+          -c "SET synchronous_commit = off;
+              TRUNCATE TABLE transactions, accounts CASCADE;
+              INSERT INTO accounts (id, name, balance, updated_at)
+                SELECT 1000 + i, 'Account ' || (1000 + i), 1000000000.00, NOW()
+                FROM generate_series(1, 100000) AS i;
+              INSERT INTO transactions (id, source_account, dest_account, amount, status, created_at, updated_at)
+                SELECT
+                  'txn' || lpad(i::text, 22, '0'),
+                  1001 + (i % 100000),
+                  1001 + ((i + 1) % 100000),
+                  1000.00 + (i % 9000),
+                  CASE
+                    WHEN i % 12 < 8 THEN 'completed'
+                    WHEN i % 12 < 11 THEN 'pending'
+                    ELSE 'failed'
+                  END,
+                  NOW() - ((i % 720) * INTERVAL '1 hour'),
+                  NOW()
+                FROM generate_series(0, 999999) AS i;"
+        chdir: "{{ app_dir }}"
+      become: true
+      register: seed_result
+      when: seed | default(false) | bool
+
+    - name: Print seed output
+      ansible.builtin.debug:
+        msg: "{{ seed_result.stdout_lines }}"
+      when: seed | default(false) | bool
+
+    - name: Count seeded accounts
+      ansible.builtin.command:
+        cmd: >
+          docker compose exec -T postgres psql
+          -U postgres -d banking -t
+          -c "SELECT COUNT(*) FROM accounts;"
+        chdir: "{{ app_dir }}"
+      become: true
+      register: account_count
+      changed_when: false
+      when: seed | default(false) | bool
+
+    - name: Count seeded transactions
+      ansible.builtin.command:
+        cmd: >
+          docker compose exec -T postgres psql
+          -U postgres -d banking -t
+          -c "SELECT COUNT(*) FROM transactions;"
+        chdir: "{{ app_dir }}"
+      become: true
+      register: tx_count
+      changed_when: false
+      when: seed | default(false) | bool
+
+    - name: Assert seeded account count
+      ansible.builtin.assert:
+        that:
+          - account_count.stdout | trim | int == expected_accounts
+        fail_msg: "Expected {{ expected_accounts }} accounts, got {{ account_count.stdout | trim }}."
+      when: seed | default(false) | bool
+
+    - name: Assert seeded transaction count
+      ansible.builtin.assert:
+        that:
+          - tx_count.stdout | trim | int == expected_transactions
+        fail_msg: "Expected {{ expected_transactions }} transactions, got {{ tx_count.stdout | trim }}."
+      when: seed | default(false) | bool
+
+    - name: Restart app and observability after seed
+      ansible.builtin.command:
+        cmd: docker compose restart app prometheus grafana
+        chdir: "{{ app_dir }}"
+      become: true
+      when: seed | default(false) | bool
+
+    - name: Wait for API after seed restart
+      ansible.builtin.uri:
+        url: "http://localhost:{{ app_port }}/metrics"
+        status_code: 200
+      register: metrics_post_seed
+      until: metrics_post_seed.status == 200
+      retries: 12
+      delay: 5
+      when: seed | default(false) | bool

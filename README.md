@@ -71,6 +71,7 @@ Client
 | Load Testing | k6 |
 | Infrastructure | Docker Compose |
 | Optional Orchestration | Kubernetes manifests (`deployments/k8s/`) |
+| Optional Cloud Demo | Terraform AWS EC2 demo + Ansible automation |
 | CI | GitHub Actions |
 | Dev tooling | air (live reload), golangci-lint, Nix flake |
 
@@ -93,6 +94,7 @@ All protection/optimization layers are toggled via environment variables. Baseli
 | `RATE_LIMIT_ENABLED` | `false` | Token bucket rate limiting |
 | `CIRCUIT_BREAKER_ENABLED` | `false` | Fail-fast on unhealthy downstream |
 | `DB_READ_REPLICA_ENABLED` | `false` | Route reads to replica |
+| `APP_MEMORY_LIMIT_BYTES` | `512MiB fallback` | Optional memory limit used by app runtime utilization metrics |
 
 See [Development Guide](docs/development.md) for the full environment variable reference.
 
@@ -237,6 +239,43 @@ make k8s-down
 
 Review image names, secrets, and environment variables before applying the manifests to a shared cluster. The app manifest currently pulls `ghcr.io/ahargunyllib/banking-peak-load-prototype:latest`; for local code changes, build and publish an image your cluster can pull, or load the image into your local cluster and update `deployments/k8s/app.yaml`. The HPA requires `metrics-server`; without it, the app still runs, but autoscaling metrics will not be available.
 
+## Cloud Demo
+
+The repo also includes an optional AWS EC2 demo under `deployments/terraform/cloud-demo/` plus Ansible playbooks under `deployments/ansible/`. These files are for demonstration and presentation runs, not for production banking infrastructure.
+
+For the safest step-by-step flow, use the dedicated [Cloud Demo Runbook](deployments/terraform/cloud-demo/README-cloud-demo.md). The shorter version below assumes commands are run from a Linux/WSL shell and from the paths shown.
+
+```bash
+cp deployments/terraform/cloud-demo/terraform.tfvars.example deployments/terraform/cloud-demo/terraform.tfvars
+make cloud-plan
+```
+
+Deploy the full demo. Terraform provisions EC2 and writes the Ansible inventory/vars, then Ansible configures the app and k6 runner:
+
+```bash
+make cloud-demo
+```
+
+For repeat deploys on existing EC2 instances:
+
+```bash
+make cloud-update
+```
+
+Run cloud load tests from the k6 runner through Ansible:
+
+```bash
+make cloud-load-status
+make cloud-load-test
+make cloud-load-spike
+```
+
+`cloud-load-test` stops previous `k6 run` processes before starting a new load test. Destroy the temporary AWS resources when the demo is done:
+
+```bash
+make cloud-destroy
+```
+
 ## SLO Targets
 
 | Metric | Baseline | Optimized |
@@ -250,15 +289,23 @@ Review image names, secrets, and environment variables before applying the manif
 
 ## Load Test Evidence
 
-The PR also includes captured screenshots for the optimized demonstration run.
+The repo includes captured screenshots for optimized Kubernetes and cloud demonstration runs.
 
-Grafana dashboard:
+Kubernetes Grafana dashboard:
 
-![Grafana dashboard](docs/grafana-screenshot.jpeg)
+![Kubernetes Grafana dashboard](docs/k8s-grafana.png)
 
-k6 load test:
+Kubernetes k6 load test:
 
-![k6 load test](docs/k6-loadtest-screenshot.jpeg)
+![Kubernetes k6 load test](docs/k8s-k6.png)
+
+Cloud Grafana dashboard:
+
+![Cloud Grafana dashboard](docs/cloud-grafana.png)
+
+Cloud k6 load test:
+
+![Cloud k6 load test](docs/cloud-k6.jpeg)
 
 ## Project Structure
 
@@ -277,12 +324,16 @@ banking-peak-load-prototype/
 ├── seeds/                     # Dummy data generation
 ├── scripts/
 │   ├── load-test/             # k6 scripts (mixed, write-only, spike, sustained)
+│   ├── cloud/                 # Cloud demo helpers
 │   └── setup/                 # Helper scripts (seed, wait-for-db)
 ├── deployments/
+│   ├── ansible/               # Ansible automation for cloud demo hosts
 │   ├── docker/                # Dockerfiles
+│   ├── k8s/                   # Kubernetes manifests
 │   ├── pgbouncer/             # PgBouncer config
 │   ├── prometheus/            # prometheus.yml
-│   └── grafana/               # Dashboard JSON provisioning
+│   ├── grafana/               # Dashboard JSON provisioning
+│   └── terraform/             # Terraform cloud demo
 ├── docs/                      # All documentation
 ├── Makefile
 └── docker-compose.yml

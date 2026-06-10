@@ -1,0 +1,84 @@
+---
+- name: Run cloud k6 load test
+  hosts: k6_runners
+  gather_facts: false
+  vars_files:
+    - ../vars/app.yml
+    - ../vars/infra.yml
+  vars:
+    loadtest_name: mixed
+    allowed_loadtest_names: "{{ ['status'] + (loadtest_scripts.keys() | list) }}"
+
+  tasks:
+    - name: Reject invalid load test
+      ansible.builtin.fail:
+        msg: "Invalid loadtest_name '{{ loadtest_name }}'. Use one of: {{ allowed_loadtest_names | join(', ') }}"
+      when: loadtest_name not in allowed_loadtest_names
+
+    - name: Stop any previous k6 run before starting a new load test
+      ansible.builtin.shell: |
+        pkill -TERM k6 || true
+        sleep 2
+        pkill -KILL k6 || true
+      changed_when: false
+      when: loadtest_name != "status"
+
+    - name: Wait for target metrics from k6 runner
+      ansible.builtin.uri:
+        url: "{{ app_base_url }}/metrics"
+        status_code: 200
+      register: target_metrics
+      until: target_metrics.status == 200
+      retries: 60
+      delay: 5
+
+    - name: Smoke check balance endpoint
+      ansible.builtin.uri:
+        url: "{{ app_base_url }}/api/v1/accounts/1001/balance"
+        status_code: 200
+        return_content: true
+      register: balance_smoke
+      when: loadtest_name == "status"
+
+    - name: Smoke check transaction status endpoint
+      ansible.builtin.uri:
+        url: "{{ app_base_url }}/api/v1/transactions/txn0000000000000000000001/status"
+        status_code: 200
+        return_content: true
+      register: transaction_smoke
+      when: loadtest_name == "status"
+
+    - name: Print status smoke output
+      ansible.builtin.debug:
+        msg:
+          - "API metrics: OK"
+          - "Balance: {{ balance_smoke.content }}"
+          - "Transaction: {{ transaction_smoke.content }}"
+      when: loadtest_name == "status"
+
+    - name: Start selected k6 scenario
+      ansible.builtin.command:
+        cmd: "k6 run --quiet {{ loadtest_scripts[loadtest_name] }}"
+        chdir: "{{ app_dir }}"
+      environment:
+        BASE_URL: "{{ app_base_url }}"
+      async: "{{ loadtest_timeout_seconds }}"
+      poll: 0
+      register: loadtest_job
+      changed_when: true
+      when: loadtest_name != "status"
+
+    - name: Wait for selected k6 scenario
+      ansible.builtin.async_status:
+        jid: "{{ loadtest_job.ansible_job_id }}"
+      register: loadtest_result
+      until: loadtest_result.finished
+      retries: "{{ loadtest_poll_retries }}"
+      delay: "{{ loadtest_poll_delay_seconds }}"
+      failed_when: loadtest_result.finished and (loadtest_result.rc | default(1) != 0)
+      when: loadtest_name != "status"
+
+    - name: Print k6 output
+      ansible.builtin.debug:
+        var: loadtest_result.stdout_lines
+      when: loadtest_name != "status"

@@ -41,3 +41,25 @@ tmp/
 # Coverage reports
 coverage.out
 coverage.html
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.lock.hcl
+
+# Archives / local installers
+*.zip
+*.deb
+
+# Generated Ansible cloud handoff
+deployments/ansible/inventory/hosts.ini
+deployments/ansible/vars/infra.yml
